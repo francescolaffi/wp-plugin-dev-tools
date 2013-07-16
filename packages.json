@@ -1,0 +1,17 @@
+{
+    "packages": {
+        "wordpress/i18n-tools": {
+            "0-dev": {
+                "name": "wordpress/i18n-tools",
+                "version": "0-dev",
+                "version_normalized": "0.0.0.0-dev",
+                "source": {
+                    "type": "svn",
+                    "url": "http://i18n.svn.wordpress.org/tools/",
+                    "reference": "trunk/"
+                },
+                "type": "library"
+            }
+        }
+    }
+}

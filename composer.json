@@ -1,0 +1,27 @@
+{
+    "name": "francescolaffi/wp-plugin-dev-tools",
+    "description": "Dev tools for wp plugins",
+    "authors": [
+        {
+            "name": "Francesco Laffi",
+            "email": "francesco.laffi@gmail.com"
+        }
+    ],
+    "config": {
+        "bin-dir": "bin"
+    },
+    "minimum-stability":"dev",
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://raw.github.com/francescolaffi/wp-plugin-dev-tools/master/"
+        }
+    ],
+    "require": {
+        "wordpress/i18n-tools": "0-dev"
+    },
+    "require-dev": {
+        "composer/satis": "@dev",
+        "composer/composer": "@dev"
+    }
+}

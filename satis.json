@@ -1,0 +1,23 @@
+{
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/francescolaffi/wp-plugin-dev-tools"
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "wordpress/i18n-tools",
+                "version": "0-dev",
+                "source": {
+                    "url": "http://i18n.svn.wordpress.org/tools/",
+                    "type": "svn",
+                    "reference": "trunk/"
+                }
+            }
+        }
+    ],
+    "require-all": true,
+    "output-dir": ".",
+    "output-html": false
+}
