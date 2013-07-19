@@ -1,5 +1,43 @@
 {
     "packages": {
+        "francescolaffi/wp-plugin-dev-tools": {
+            "dev-master": {
+                "name": "francescolaffi/wp-plugin-dev-tools",
+                "version": "dev-master",
+                "version_normalized": "9999999-dev",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/francescolaffi/wp-plugin-dev-tools.git",
+                    "reference": "c22e157844752a3a72c8001ba19a7d6e83b00301"
+                },
+                "dist": {
+                    "type": "zip",
+                    "url": "https://api.github.com/repos/francescolaffi/wp-plugin-dev-tools/zipball/c22e157844752a3a72c8001ba19a7d6e83b00301",
+                    "reference": "c22e157844752a3a72c8001ba19a7d6e83b00301",
+                    "shasum": ""
+                },
+                "require": {
+                    "wordpress/i18n-tools": "0-dev"
+                },
+                "require-dev": {
+                    "composer/composer": "@dev",
+                    "composer/satis": "@dev"
+                },
+                "time": "2013-07-16 16:48:09",
+                "type": "library",
+                "authors": [
+                    {
+                        "name": "Francesco Laffi",
+                        "email": "francesco.laffi@gmail.com"
+                    }
+                ],
+                "description": "Dev tools for wp plugins",
+                "support": {
+                    "source": "https://github.com/francescolaffi/wp-plugin-dev-tools/tree/master",
+                    "issues": "https://github.com/francescolaffi/wp-plugin-dev-tools/issues"
+                }
+            }
+        },
         "wordpress/i18n-tools": {
             "0-dev": {
                 "name": "wordpress/i18n-tools",
@@ -10,7 +48,12 @@
                     "url": "http://i18n.svn.wordpress.org/tools/",
                     "reference": "trunk/"
                 },
-                "type": "library"
+                "type": "library",
+                "autoload": {
+                    "classmap": [
+                        "./"
+                    ]
+                }
             }
         }
     }

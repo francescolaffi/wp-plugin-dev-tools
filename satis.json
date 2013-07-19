@@ -1,7 +1,7 @@
 {
     "repositories": [
         {
-            "type": "git",
+            "type": "vcs",
             "url": "https://github.com/francescolaffi/wp-plugin-dev-tools"
         },
         {
@@ -13,6 +13,9 @@
                     "url": "http://i18n.svn.wordpress.org/tools/",
                     "type": "svn",
                     "reference": "trunk/"
+                },
+                "autoload": {
+                    "classmap": ["./"]
                 }
             }
         }
