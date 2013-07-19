@@ -8,7 +8,7 @@
             "type": "package",
             "package": {
                 "name": "wordpress/i18n-tools",
-                "version": "0-dev",
+                "version": "dev-trunk",
                 "source": {
                     "url": "http://i18n.svn.wordpress.org/tools/",
                     "type": "svn",
