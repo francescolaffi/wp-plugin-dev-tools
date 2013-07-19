@@ -1,0 +1,19 @@
+#!/usr/bin/env php
+<?php
+
+namespace WPPluginDevTools;
+
+
+
+if (file_exists(__DIR__ . '/../../../vendor/autoload.php')) {
+    require __DIR__ . '/../../../vendor/autoload.php';
+} elseif (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require __DIR__ . '/vendor/autoload.php';
+} else {
+    fputs(STDERR, 'ERROR: composer autoloader not found' . PHP_EOL);
+    exit(1);
+}
+
+$console = new Application();
+$console->run();
+
