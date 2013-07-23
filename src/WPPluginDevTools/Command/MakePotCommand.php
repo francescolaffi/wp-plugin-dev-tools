@@ -2,10 +2,8 @@
 
 namespace WPPluginDevTools\Command;
 
-use MakePOT;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class MakePotCommand extends Command
@@ -19,7 +17,7 @@ class MakePotCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->makePot($inpu, $output);
+        $this->makePot($input, $output);
     }
 
     public function makePot(InputInterface $input, OutputInterface $output){
@@ -29,7 +27,7 @@ class MakePotCommand extends Command
         $errLevel = error_reporting();
         error_reporting($errLevel & ~(E_WARNING | E_NOTICE | E_STRICT | E_DEPRECATED));
 
-        $makePOT = new MakePOT();
+        $makePOT = new \MakePOT();
 
         $potfile = $this->path.'/'.trim($this->config['pot_location'], '/');
 

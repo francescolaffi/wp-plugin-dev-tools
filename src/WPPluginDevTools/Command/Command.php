@@ -4,9 +4,11 @@ namespace WPPluginDevTools\Command;
 
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\StreamOutput;
 use WPPluginDevTools\Config\YamlPluginLoader;
 
 /**
@@ -49,15 +51,13 @@ class Command extends BaseCommand
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         if (null === $this->path) {
-            $realpath = realpath($input->getArgument('path'));
-            if (!$realpath || !is_dir($realpath)) {
+            $path = realpath($input->getArgument('path'));
+            if (!$path || !is_dir($path)) {
                 throw new \UnexpectedValueException('Invalid plugin path: ' . $input->getArgument('path'));
             }
-            $this->path = $realpath;
-        }
-        if (null === $this->config) {
+            $this->path = $path;
             $loader = new YamlPluginLoader();
-            $this->config = $loader->load("$this->path/plugin.yml");
+            $this->config = $loader->load("$path/plugin.yml");
         }
 
         foreach ($this->subCommands as $cmd) {
@@ -80,5 +80,47 @@ class Command extends BaseCommand
     public function setPath($path)
     {
         $this->path = $path;
+    }
+
+    protected function exec($command, &$lines = null)
+    {
+        exec($command, $lines, $code);
+        if ($code !== 0) {
+            throw new \RuntimeException("Command `$command` exited with code $code", $code);
+        }
+        return $code;
+    }
+
+    protected function exec_interactive($command, InputInterface $input, OutputInterface $output)
+    {
+        if (!$input->isInteractive()) {
+            throw new \LogicException("Cannot run command `$command` interactively because input is not interactive");
+        }
+
+        $in = STDIN;
+        $out = ($output instanceof StreamOutput) ? $output->getStream() : STDOUT;
+        $err = ($output instanceof ConsoleOutputInterface) ? $output->getErrorOutput()->getStream() : STDERR;
+
+        $proc = proc_open($command, array($in, $out, $err), $pipes);
+
+//        while ($status = proc_get_status($proc) and $status['running']) {
+//            usleep($interval);
+//        }
+//
+//        $code = $status['exitcode'];
+
+        // blocking until process ends
+        $code = proc_close($proc);
+
+        if ($code !== 0) {
+            throw new \RuntimeException("Command `$command` exited with code $code", $code);
+        }
+
+        return $code;
+    }
+
+    protected function svnUrl()
+    {
+        return $this->config['svn_repo'] ? : $this->config['svn_repo_base'] . '/' . $this->config['slug'];
     }
 }

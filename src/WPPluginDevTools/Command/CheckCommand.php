@@ -2,8 +2,8 @@
 
 namespace WPPluginDevTools\Command;
 
-use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class CheckCommand extends Command
@@ -31,6 +31,7 @@ class CheckCommand extends Command
         $versions = array();
         $warnings = array();
 
+        $output->writeln('Running version consistency checks');
         // (1) find and parse main file
         $output->write('searching main file: ');
         $maybeMainFile = glob("{$this->path}/*.php");
@@ -51,7 +52,7 @@ class CheckCommand extends Command
         }
         if ($mainFile) {
             $output->writeln('<info>OK</info>');
-            $output->writeln('['.basename($mainFile)."] vers:<info>{$match['vers']}</info>");
+            $output->writeln('[' . basename($mainFile) . "] vers:<info>{$match['vers']}</info>");
         } else {
             $output->writeln('<error>error!</error> main file not found or invalid');
             $error = true;
@@ -62,14 +63,35 @@ class CheckCommand extends Command
         if (!is_readable("{$this->path}/readme.txt")) {
             $output->writeln('<error>error!</error> file not found');
             $error = true;
-        } elseif (!preg_match(self::REGEX_README, file_get_contents("{$this->path}/readme.txt"), $match)) {
-            $output->writeln('<error>error!</error> invalid');
-            $error = true;
         } else {
-            $name = $match['name'];
-            $versions[] = $match['vers'];
-            ## todo: check changelog and notice presence
-            $output->writeln("vers:<info>{$match['vers']}</info> name:{$match['name']}");
+            $readme = file_get_contents("{$this->path}/readme.txt");
+            if (!preg_match(self::REGEX_README, $readme, $match)) {
+                $output->writeln('<error>error!</error> invalid');
+                $error = true;
+            } else {
+                $name = $match['name'];
+                $versions[] = $v = $match['vers'];
+                $output->writeln("vers:<info>{$match['vers']}</info> name:{$match['name']}");
+
+                $sections = array('Changelog', 'Upgrade Notice');
+                foreach ($sections as $section) {
+                    $regexSection = sprintf('/\n==\s*%s\s*==\n.*?\n==/si', $section);
+                    $regexMessage = sprintf('/\n=\s*%s\s*=\n(.+?)\n=/si', $v);
+
+                    if (preg_match($regexSection, $readme . "\n==", $matchSection) && !empty($matchSection[0])
+                        && preg_match($regexMessage, $matchSection[0], $match) && !empty($match[1]) && trim($match[1])
+                    ) {
+                        if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
+                            $output->writeln("<info>Found $section for vers $v:</info>" . PHP_EOL . trim($match[1]));
+                        }
+                    } else {
+                        if (OutputInterface::VERBOSITY_VERBOSE <= $output->getVerbosity()) {
+                            $output->writeln("<comment>Couldn't find $section for vers $v</comment>");
+                        }
+                        $warnings[] = "$section for version $v not found in readme.txt";
+                    }
+                }
+            }
         }
 
         # (3) check custom locations
@@ -98,7 +120,7 @@ class CheckCommand extends Command
             return !preg_match('/^' . self::REGEX_VERSION . '$/', $v);
         });
         if (count($invalid) > 0) {
-            $output->writeln('<error>Error:</error> invalid version formats '.join(' ', $invalid).' (only numbers joined by periods allowed)');
+            $output->writeln('<error>Error:</error> invalid version formats ' . join(' ', $invalid) . ' (only numbers joined by periods allowed)');
             $error = true;
         }
 
@@ -112,11 +134,11 @@ class CheckCommand extends Command
         } else {
             $output->writeln('Checking existing svn tags');
 
-            $svnUrl = $this->config['svn_repo'].'/'.$this->config['slug'];
-            $tags = `svn ls "$svnUrl/tags" --non-interactive`;
+            $svnUrl = $this->svnUrl();
+            $this->exec("svn ls '$svnUrl/tags' --non-interactive", $lines);
             $tags = array_filter(array_map(function ($s) {
                 return trim($s, '/');
-            }, explode("\n", $tags)));
+            }, $lines));
 
             usort($tags, 'version_compare');
 
@@ -126,7 +148,7 @@ class CheckCommand extends Command
                 $error = true;
             }
             $highestVers = end($tags);
-            if(version_compare($highestVers, $vers, '>')) {
+            if (version_compare($highestVers, $vers, '>')) {
                 $output->writeln("<error>Error:</error> higher version $highestVers found");
                 $error = true;
             }
@@ -137,6 +159,10 @@ class CheckCommand extends Command
         }
 
         $output->writeln('<info>All checks completed</info>');
+
+        foreach ($warnings as $warning) {
+            $output->writeln("<comment>Warning:</comment> $warning");
+        }
 
         return array(
             'name' => $name,
