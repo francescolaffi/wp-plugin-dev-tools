@@ -34,6 +34,7 @@ class TagCommand extends Command
         parent::configure();
         $this->setName('tag')
             ->setDescription('tag and release current version')
+            ->addOption('no-pot', null, InputOption::VALUE_NONE, 'don\'t update the pot file')
             ->addOption('no-trunk', null, InputOption::VALUE_NONE, 'don\'t update the svn trunk')
             ->addOption('no-assets', null, InputOption::VALUE_NONE, 'don\'t update the svn assets')
             ->addOption('message', 'm', InputOption::VALUE_REQUIRED, 'commit message', 'Release version %s');
@@ -68,9 +69,11 @@ class TagCommand extends Command
 
         $output->writeln('');
 
-        $this->makePotCmd->makePot($input, $output);
+        if (!$input->getOption('no-pot')) {
+            $this->makePotCmd->makePot($input, $output);
 
-        $output->writeln('');
+            $output->writeln('');
+        }
 
         $output->writeln('Setting up svn repo');
 
@@ -92,30 +95,34 @@ class TagCommand extends Command
         $rsyncFiltersFile = "$tempDir/rsync-filters";
         file_put_contents($rsyncFiltersFile, join(PHP_EOL, $filters));
 
-        $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/tags/$tag --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
+        $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/tags/$tag --filter='. $rsyncFiltersFile' --filter='P .svn/'");
+        $this->exec("svn add $svnDirEsc/tags/$tag/* --force --no-ignore --non-interactive");
 
         $output->writeln('Syncing files in svn repo');
         if ($doTrunk) {
             if ($this->config['trunk']['minimal']) {
                 $this->deepCheckout("$svnDir/trunk", 'immediates');
+                $this->exec("svn rm $svnDirEsc/trunk/* --force --non-interactive");
                 $trunkReadme = str_replace(
                     array('%name%', '%version%', '%dev-url%'),
                     array($info['name'], $tag, $this->config['trunk']['dev_url']),
                     $this->config['trunk']['readme_content']
                 );
                 file_put_contents("$svnDir/trunk/readme.txt", $trunkReadme);
+                $this->exec("svn add $svnDirEsc/trunk/readme.txt --force --no-ignore --non-interactive");
             } else {
                 $this->deepCheckout("$svnDir/trunk", 'infinity');
-                $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/trunk --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
+                $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/trunk --filter='. $rsyncFiltersFile' --filter='P .svn/'");
+                $this->exec("svn add $svnDirEsc/trunk/* --force --no-ignore --non-interactive");
             }
         }
         if ($doAssets) {
-            $this->deepCheckout("$svnDir/assets", 'infinity');
-            $this->exec("rsync -a --delete '{$this->path}/".trim($this->config['assets']['dir'], '/')."/' $svnDirEsc/assets --filter='P /.svn/'");
+            $this->deepCheckout("$svnDir/assets");
+            $this->exec("rsync -a --delete '{$this->path}/" . trim($this->config['assets']['dir'], '/') . "/' $svnDirEsc/assets --filter='P .svn/'");
+            $this->exec("svn add $svnDirEsc/assets/* --force --no-ignore --non-interactive");
         }
 
         $output->writeln("Committing");
-        $this->exec("svn add $svnDirEsc/* --force --no-ignore --non-interactive");
         $commitMsg = sprintf($input->getOption('message'), $tag);
         if ($input->isInteractive()) {
             $this->exec_interactive("svn commit $svnDirEsc --message='$commitMsg'", $input, $output);
@@ -152,7 +159,8 @@ class TagCommand extends Command
         $this->exec("svn up --set-depth=immediates '$svnDir/tags' --non-interactive");
     }
 
-    private function deepCheckout($dir, $depth = 'infinity') {
+    private function deepCheckout($dir, $depth = 'infinity')
+    {
         if (is_dir("$dir")) {
             $this->exec("svn up --set-depth=$depth '$dir' --non-interactive");
         } else {
