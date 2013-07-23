@@ -103,12 +103,6 @@ class Command extends BaseCommand
 
         $proc = proc_open($command, array($in, $out, $err), $pipes);
 
-//        while ($status = proc_get_status($proc) and $status['running']) {
-//            usleep($interval);
-//        }
-//
-//        $code = $status['exitcode'];
-
         // blocking until process ends
         $code = proc_close($proc);
 

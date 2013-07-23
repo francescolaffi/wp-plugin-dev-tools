@@ -79,22 +79,25 @@ class TagCommand extends Command
 
         $tag = $info['version'];
         $svnDir = "$tempDir/svn";
+        $svnDirEsc = escapeshellarg($svnDir);
 
         $doTrunk = $this->config['trunk']['enabled'] && !$input->getOption('no-trunk');
         $doAssets = $this->config['assets']['enabled'] && !$input->getOption('no-assets');
 
-        $this->checkout($svnDir, $tag);
+        $this->sparseCheckout($svnDir);
+        $this->deepCheckout("$svnDir/tags/$tag");
         $output->writeln('Done sparse svn checkout');
 
         $filters = $this->getRsyncFilters($tempDir);
         $rsyncFiltersFile = "$tempDir/rsync-filters";
         file_put_contents($rsyncFiltersFile, join(PHP_EOL, $filters));
 
-        $this->exec("rsync -a --delete '{$this->path}/' '$svnDir/tags/$tag' --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
-        $this->exec("svn add '$svnDir/tags/$tag/*' --non-interactive");
+        $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/tags/$tag --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
 
+        $output->writeln('Syncing files in svn repo');
         if ($doTrunk) {
             if ($this->config['trunk']['minimal']) {
+                $this->deepCheckout("$svnDir/trunk", 'immediates');
                 $trunkReadme = str_replace(
                     array('%name%', '%version%', '%dev-url%'),
                     array($info['name'], $tag, $this->config['trunk']['dev_url']),
@@ -102,25 +105,29 @@ class TagCommand extends Command
                 );
                 file_put_contents("$svnDir/trunk/readme.txt", $trunkReadme);
             } else {
-                $this->exec("rsync -a --delete '{$this->path}/' '$svnDir/trunk' --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
+                $this->deepCheckout("$svnDir/trunk", 'infinity');
+                $this->exec("rsync -a --delete '{$this->path}/' $svnDirEsc/trunk --filter='. $rsyncFiltersFile' --filter='P /.svn/'");
             }
-            $this->exec("svn add '$svnDir/trunk/*' --non-interactive");
         }
         if ($doAssets) {
-            $this->exec("rsync -a --delete '{$this->path}/".trim($this->config['assets']['dir'], '/')."/' '$svnDir/assets' --filter='P /.svn/'");
-            $this->exec("svn add '$svnDir/assets/*' --non-interactive");
+            $this->deepCheckout("$svnDir/assets", 'infinity');
+            $this->exec("rsync -a --delete '{$this->path}/".trim($this->config['assets']['dir'], '/')."/' $svnDirEsc/assets --filter='P /.svn/'");
         }
 
+        $output->writeln("Committing");
+        $this->exec("svn add $svnDirEsc/* --force --no-ignore --non-interactive");
         $commitMsg = sprintf($input->getOption('message'), $tag);
         if ($input->isInteractive()) {
-            $this->exec_interactive("svn commit '$svnDir' -message='$commitMsg'", $input, $output);
+            $this->exec_interactive("svn commit $svnDirEsc --message='$commitMsg'", $input, $output);
         } else {
-            $this->exec("svn commit '$svnDir' -message='$commitMsg' --non-interactive");
+            $this->exec("svn commit $svnDirEsc --message='$commitMsg' --non-interactive");
         }
 
-        if (strpos($tempDir, sys_get_temp_dir()) === 0) {
-            $output->writeln("Cleaning up temp dir $tempDir");
+        $output->writeln("Cleaning up temp dir $tempDir");
+        if (strpos($tempDir, realpath(sys_get_temp_dir())) === 0) {
             $this->exec("/bin/rm -rf '$tempDir'");
+        } else {
+            $output->writeln("<comment>warning</comment> tempdir $tempDir not cleaned, check manually");
         }
         $output->writeln('Finished');
     }
@@ -131,23 +138,25 @@ class TagCommand extends Command
         unlink($tempDir);
         mkdir($tempDir);
 
-        if (!is_dir($tempDir) || !strpos($tempDir, sys_get_temp_dir()) === 0) {
+        if (!is_dir($tempDir) || strpos($tempDir, realpath(sys_get_temp_dir())) !== 0) {
             throw new \RuntimeException("Problem creating temp dir $tempDir");
         }
         return $tempDir;
     }
 
-    private function checkout($svnDir, $tag)
+    private function sparseCheckout($svnDir)
     {
         $svnUrl = $this->svnUrl();
 
         $this->exec("svn co --depth=immediates '$svnUrl' '$svnDir' --non-interactive");
-        $this->exec("svn up --depth=immediates '$svnDir/tags' --non-interactive");
+        $this->exec("svn up --set-depth=immediates '$svnDir/tags' --non-interactive");
+    }
 
-        if (is_dir("$svnDir/tags/$tag")) {
-            $this->exec("svn up --depth=infinity '$svnDir/tags/$tag' --non-interactive");
+    private function deepCheckout($dir, $depth = 'infinity') {
+        if (is_dir("$dir")) {
+            $this->exec("svn up --set-depth=$depth '$dir' --non-interactive");
         } else {
-            $this->exec("svn mkdir '$svnDir/tags/$tag' --non-interactive");
+            $this->exec("svn mkdir '$dir' --non-interactive");
         }
     }
 
