@@ -7,16 +7,18 @@
             "email": "francesco.laffi@gmail.com"
         }
     ],
+    "bin": ["plugin-tools"],
+    "autoload": {
+        "psr-0": {
+            "WPPluginDevTools": "src/"
+        }
+    },
     "repositories": [
         {
             "type": "composer",
             "url": "https://raw.github.com/francescolaffi/wp-plugin-dev-tools/master/"
         }
     ],
-    "config": {
-        "bin-dir": "bin"
-    },
-    "minimum-stability":"dev",
     "require": {
         "php": ">=5.3.0",
         "wordpress/i18n-tools": "dev-trunk",
@@ -27,7 +29,8 @@
     "require-dev": {
         "composer/satis": "@dev"
     },
-    "autoload": {
-        "psr-0": {"WPPluginDevTools": "src/"}
+    "minimum-stability": "dev",
+    "config": {
+        "bin-dir": "bin"
     }
 }
